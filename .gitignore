@@ -1,0 +1,12 @@
+# Temporary scripts
+*.py
+*.html
+*.json
+*.txt
+
+# Keep the main application files
+!index.html
+!style.css
+!app.js
+!launch.py
+!README.md
