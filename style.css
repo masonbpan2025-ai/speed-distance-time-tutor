@@ -191,14 +191,9 @@ h1, h2, h3, h4, h5, h6 {
 
 .category-filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
   padding-bottom: 4px;
-  scrollbar-width: none;
-}
-
-.category-filters::-webkit-scrollbar {
-  display: none;
 }
 
 .filter-btn {
@@ -300,6 +295,7 @@ h1, h2, h3, h4, h5, h6 {
 .tag-roundtrip { background: hsla(145, 80%, 45%, 0.15); color: hsl(145, 80%, 60%); }
 .tag-catchup { background: hsla(280, 80%, 60%, 0.15); color: hsl(280, 80%, 75%); }
 .tag-split { background: hsla(35, 90%, 55%, 0.15); color: hsl(35, 90%, 65%); }
+.tag-worktime { background: hsla(350, 80%, 55%, 0.15); color: hsl(350, 80%, 65%); }
 
 .problem-preview {
   font-size: 0.78rem;

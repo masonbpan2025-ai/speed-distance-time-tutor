@@ -654,7 +654,831 @@ document.addEventListener('DOMContentLoaded', () => {
         drawRuler(ctx, splitX, endX, centerY + 30, `Stage 2: ${(r2 * t2).toFixed(1)} km`, '#ec4899');
         drawRuler(ctx, startX, endX, centerY + 65, `Total Trip: ${D.toFixed(0)} km`, '#4ade80');
       }
+    },
+    // === WORK / TIME EXAMPLES ===
+    {
+      id: 'ex-5',
+    title: 'Example 9.10.1',
+    isExample: true,
+    category: 'worktime',
+    timeUnit: 'h',
+    text: 'Karl can clean a room in <span class="highlight">3 hours</span>. If his little sister Kyra helps, they can clean it in <span class="highlight">2.4 hours</span>. How long would it take Kyra to do the job alone?',
+    defaultParams: { timeA: 3, togetherTime: 2.4 },
+    sliders: [
+      { key: 'timeA', label: "Karl's Solo Time", min: 1, max: 10, step: 0.5, unit: 'h', desc: "Hours for Karl to clean the room alone" },
+      { key: 'togetherTime', label: "Together Time", min: 0.5, max: 5, step: 0.1, unit: 'h', desc: "Hours when Karl and Kyra work together" }
+    ],
+    solver: (p) => {
+      // Job = 1 room. Rates are in room/h. Variable t = Kyra's solo time.
+      const D = 1; // 1 room = the whole job
+      const tA = p.timeA, tTog = p.togetherTime;
+      const rA = D / tA;          // Karl's rate = 1/3 room/h
+      const rTog = D / tTog;      // Combined rate = 1/2.4 room/h
+      const tB = 1 / (rTog - rA); // Kyra's solo time (variable we solve for)
+      const rB = D / tB;          // Kyra's rate in room/h (for display/animation only)
+      // Distances covered within the together-time window (each works the whole 2.4 h):
+      const distA = rA * tTog;    // Karl's share of the job while together
+      const distB = rB * tTog;    // Kyra's share of the job while together
+      return {
+        calculatedValues: { tA, tTog, tB, rA, rB, rTog, D, distA, distB, maxTime: tTog },
+        table: [
+          { name: 'Karl',     rate: `${fracStr(rA)} room/h`,          time: `${tTog} h`, dist: `${fracStr(distA)} room` },
+          { name: 'Kyra',     rate: `1/t room/h`,                     time: `${tTog} h`, dist: `${tTog}/t room` },
+          { name: 'Together', rate: `${fracStr(rTog)} room/h`,        time: `${tTog} h`, dist: `1 room` }
+        ],
+        steps: [
+          { title: 'Set up the rate table (1 room = the whole job)',
+            desc: `Let <i>t</i> = Kyra's solo time in hours. Rate = 1 ÷ time, so Karl cleans at 1/${tA} room/h, Kyra at 1/t room/h, and together at 1/${tTog} room/h.`,
+            eq: `\\text{Karl: } \\frac{1}{${tA}} \\text{ room/h} \\quad \\text{Kyra: } \\frac{1}{t} \\text{ room/h} \\quad \\text{Together: } \\frac{1}{${tTog}} \\text{ room/h}` },
+          { title: 'Rates add when working together',
+            desc: 'When two people work together, their rates add up to the combined rate.',
+            eq: `\\frac{1}{${tA}} + \\frac{1}{t} = \\frac{1}{${tTog}}` },
+          { title: 'Solve for t (Kyra\'s solo time)',
+            desc: `Isolate 1/t by subtracting Karl's rate from the combined rate, then take the reciprocal.`,
+            eq: `\\frac{1}{t} = \\frac{1}{${tTog}} - \\frac{1}{${tA}} = ${(rTog).toFixed(4)} - ${(rA).toFixed(4)} = ${(rTog - rA).toFixed(4)} \\\\ t = \\frac{1}{${(rTog - rA).toFixed(4)}} = ${tB.toFixed(2)} \\text{ hours}` },
+          { title: 'Why together is faster',
+            desc: `Kyra alone would take ${tB.toFixed(2)} h, Karl alone ${tA} h — but together they finish in only ${tTog} h, because their combined effort closes the gap from both ends.`,
+            eq: `\\text{Together } (${tTog} \\text{ h}) < \\text{ Kyra alone } (${tB.toFixed(2)} \\text{ h}) \\text{ and Karl alone } (${tA} \\text{ h})` }
+        ],
+        finalAnswer: `Kyra's solo time: ${tB.toFixed(2)} hours`,
+        quiz: { prompt: `Karl cleans at 1/${tA} room/h and together they clean at 1/${tTog} room/h. How many hours would Kyra take alone (solve for t)?`, answer: parseFloat(tB.toFixed(2)), unit: 'h' }
+      };
+    },
+    draw: (ctx, canvasTime, p) => {
+      // 1 room = the whole job. Two people walk TOWARD each other; when they meet
+      // at the middle, the room (= job) is fully cleaned.
+      const D = 1;
+      const tA = p.timeA, tTog = p.togetherTime;
+      const rA = D / tA, rTog = D / tTog, rB = Math.max(0.001, rTog - rA);
+      drawWorkTogether(ctx, canvas, {
+        jobUnitLabel: 'room',
+        doneLabel: 'ROOM CLEAN!',
+        rateUnit: 'room/h',
+        people: [
+          { name: 'Karl', rate: rA, color: '#38bdf8', side: 'left' },
+          { name: 'Kyra', rate: rB, color: '#f472b6', side: 'right' }
+        ],
+        totalTime: tTog,
+        canvasTime,
+        caption: `1 room = the job  •  together they close the gap from both ends  •  finish in ${tTog} h`
+      });
     }
+  },
+  {
+    id: 'ex-6',
+    title: 'Example 9.10.2',
+    isExample: true,
+    category: 'worktime',
+    timeUnit: 'h',
+    text: 'Doug takes <span class="highlight">twice as long</span> as Becky to complete a project. Together they can complete the project in <span class="highlight">10 hours</span>. How long will it take each of them to complete the project alone?',
+    defaultParams: { beckyTime: 15 },
+    sliders: [
+      { key: 'beckyTime', label: "Becky's Solo Time", min: 5, max: 30, step: 1, unit: 'h', desc: "Hours for Becky alone (Doug always takes double this)" }
+    ],
+    solver: (p) => {
+      // Job = 1 project. Rates in project/h. Variable t = Becky's solo time.
+      const D = 1;
+      const tBecky = p.beckyTime, tDoug = 2 * tBecky;
+      const rBecky = D / tBecky, rDoug = D / tDoug;       // 1/t and 1/(2t)
+      const rTog = rBecky + rDoug;                          // = 3/(2t)
+      const tTog = D / rTog;                                // = 2t/3
+      const distBecky = rBecky * tTog, distDoug = rDoug * tTog;
+      return {
+        calculatedValues: { tBecky, tDoug, tTog, rBecky, rDoug, rTog, D, distBecky, distDoug, maxTime: tTog },
+        table: [
+          { name: 'Becky',     rate: '1/t project/h',      time: 't h', dist: '1 project' },
+          { name: 'Doug',      rate: '1/(2t) project/h',   time: '2t h', dist: '1 project' },
+          { name: 'Together',  rate: '3/(2t) project/h',   time: '10 h', dist: '1 project' }
+        ],
+        steps: [
+          { title: 'Set up the rate table (1 project = the job)',
+            desc: 'Let <i>t</i> = Becky\'s solo time in hours. Doug takes twice as long, so his time is <i>2t</i>. Rate = 1 ÷ time.',
+            eq: `\\text{Becky: } \\frac{1}{t} \\text{ project/h} \\quad \\text{Doug: } \\frac{1}{2t} \\text{ project/h}` },
+          { title: 'Rates add when working together',
+            desc: 'Working together, their combined rate equals the sum of their individual rates, and together they finish 1 project in 10 h (rate = 1/10).',
+            eq: `\\frac{1}{t} + \\frac{1}{2t} = \\frac{1}{10}` },
+          { title: 'Solve for t',
+            desc: 'Combine the fractions on the left (common denominator 2t), then cross-multiply.',
+            eq: `\\frac{2}{2t} + \\frac{1}{2t} = \\frac{1}{10} \\\\ \\frac{3}{2t} = \\frac{1}{10} \\\\ 2t = 30 \\\\ t = 15 \\text{ h (Becky)}` },
+          { title: 'Find Doug\'s time',
+            desc: 'Doug takes 2t, so multiply Becky\'s time by 2.',
+            eq: `\\text{Doug} = 2t = 2 \\times 15 = 30 \\text{ h}` }
+        ],
+        finalAnswer: `Becky: ${tBecky} hours | Doug: ${tDoug} hours`,
+        quiz: { prompt: `Becky's rate is 1/t and Doug's is 1/(2t). If together they finish in 10 h (rate 1/10), what is t (Becky's solo time)?`, answer: parseFloat(tBecky), unit: 'h' }
+      };
+    },
+    draw: (ctx, canvasTime, p) => {
+      const D = 1;
+      const tBecky = p.beckyTime, tDoug = 2 * tBecky;
+      const rBecky = D / tBecky, rDoug = D / tDoug;
+      const tTog = D / (rBecky + rDoug);
+      drawWorkTogether(ctx, canvas, {
+        jobUnitLabel: 'project',
+        doneLabel: 'PROJECT DONE!',
+        rateUnit: 'project/h',
+        people: [
+          { name: 'Becky', rate: rBecky, color: '#a78bfa', side: 'left' },
+          { name: 'Doug',  rate: rDoug,  color: '#fb923c', side: 'right' }
+        ],
+        totalTime: tTog,
+        canvasTime,
+        caption: `1 project = the job  •  Doug takes 2× as long  •  together: ${tTog.toFixed(2)} h`
+      });
+    }
+  },
+  {
+    id: 'ex-7',
+    title: 'Example 9.10.3',
+    isExample: true,
+    category: 'worktime',
+    timeUnit: 'days',
+    text: 'Joey can build a large shed in <span class="highlight">10 days less</span> than Cosmo can. If they built it together, it would take them <span class="highlight">12 days</span>. How long would it take each of them working alone?',
+    defaultParams: { cosmoTime: 30 },
+    sliders: [
+      { key: 'cosmoTime', label: "Cosmo's Solo Time", min: 12, max: 50, step: 1, unit: 'days', desc: "Days for Cosmo alone (Joey is always 10 days faster)" }
+    ],
+    solver: (p) => {
+      // Job = 1 shed. Rates in shed/day. Variable t = Cosmo's solo time; Joey = t − 10.
+      const D = 1;
+      const tCosmo = p.cosmoTime, tJoey = Math.max(1, tCosmo - 10);
+      const rCosmo = D / tCosmo, rJoey = D / tJoey;      // 1/t and 1/(t-10)
+      const rTog = rCosmo + rJoey;                         // = 1/12
+      const tTog = D / rTog;                               // 12 (matches given)
+      const distCosmo = rCosmo * tTog, distJoey = rJoey * tTog;
+      return {
+        calculatedValues: { tCosmo, tJoey, tTog, rCosmo, rJoey, rTog, D, distCosmo, distJoey, maxTime: tTog },
+        table: [
+          { name: 'Cosmo',    rate: '1/t shed/day',       time: 't days',     dist: '1 shed' },
+          { name: 'Joey',     rate: '1/(t-10) shed/day',  time: 't-10 days',  dist: '1 shed' },
+          { name: 'Together', rate: '1/12 shed/day',      time: '12 days',    dist: '1 shed' }
+        ],
+        steps: [
+          { title: 'Set up the rate table (1 shed = the job)',
+            desc: 'Let <i>t</i> = Cosmo\'s solo time in days. Joey takes 10 days less, so his time is <i>t − 10</i>. Rate = 1 ÷ time.',
+            eq: `\\text{Cosmo: } \\frac{1}{t} \\text{ shed/day} \\quad \\text{Joey: } \\frac{1}{t-10} \\text{ shed/day}` },
+          { title: 'Rates add when working together',
+            desc: 'Their combined rate is the sum, and together they build 1 shed in 12 days (rate = 1/12).',
+            eq: `\\frac{1}{t} + \\frac{1}{t-10} = \\frac{1}{12}` },
+          { title: 'Solve for t (clear denominators)',
+            desc: 'Multiply through by the common denominator 12t(t−10), then expand and solve the quadratic.',
+            eq: `12(t-10) + 12t = t(t-10) \\\\ 24t - 120 = t^2 - 10t \\\\ t^2 - 34t + 120 = 0 \\\\ (t-30)(t-4)=0` },
+          { title: 'Check and choose the valid root',
+            desc: 't = 4 would make Joey\'s time t − 10 negative (impossible), so discard it.',
+            eq: `t = 30 \\text{ days (Cosmo)} \\quad \\Rightarrow \\quad t - 10 = 20 \\text{ days (Joey)}` }
+        ],
+        finalAnswer: `Cosmo: ${tCosmo} days | Joey: ${tJoey} days`,
+        quiz: { prompt: `Cosmo's rate is 1/t and Joey's is 1/(t-10); together they build 1 shed in 12 days. What is t (Cosmo's solo time)?`, answer: tCosmo, unit: 'days' }
+      };
+    },
+    draw: (ctx, canvasTime, p) => {
+      const D = 1;
+      const tCosmo = p.cosmoTime, tJoey = Math.max(1, tCosmo - 10);
+      const rCosmo = D / tCosmo, rJoey = D / tJoey;
+      const tTog = D / (rCosmo + rJoey);
+      drawWorkTogether(ctx, canvas, {
+        jobUnitLabel: 'shed',
+        doneLabel: 'SHED BUILT!',
+        rateUnit: 'shed/day',
+        people: [
+          { name: 'Cosmo', rate: rCosmo, color: '#c084fc', side: 'left' },
+          { name: 'Joey',  rate: rJoey,  color: '#22d3ee', side: 'right' }
+        ],
+        totalTime: tTog,
+        canvasTime,
+        caption: `1 shed = the job  •  Joey is 10 days faster  •  together: ${tTog.toFixed(2)} days`
+      });
+    }
+  },
+  {
+    id: 'ex-8',
+    title: 'Example 9.10.4',
+    isExample: true,
+    category: 'worktime',
+    timeUnit: 'h',
+    text: 'Clark can complete a job in <span class="highlight">one hour less</span> than his apprentice. Together, they do the job in <span class="highlight">1 hour and 12 minutes</span> (1.2 h). How long would it take each of them working alone?',
+    defaultParams: { apprenticeTime: 3 },
+    sliders: [
+      { key: 'apprenticeTime', label: "Apprentice's Solo Time", min: 1.5, max: 8, step: 0.5, unit: 'h', desc: "Hours for the apprentice alone (Clark is always 1 h faster)" }
+    ],
+    solver: (p) => {
+      // Job = 1 job. Rates in job/h. Variable t = apprentice's solo time; Clark = t − 1.
+      const D = 1;
+      const tApp = p.apprenticeTime, tClark = Math.max(0.5, tApp - 1);
+      const rApp = D / tApp, rClark = D / tClark;        // 1/t and 1/(t-1)
+      const rTog = rApp + rClark;                          // = 1/1.2 = 5/6
+      const tTog = D / rTog;                               // 1.2 h
+      const distApp = rApp * tTog, distClark = rClark * tTog;
+      return {
+        calculatedValues: { tApp, tClark, tTog, rApp, rClark, rTog, D, distApp, distClark, maxTime: tTog },
+        table: [
+          { name: 'Apprentice', rate: '1/t job/h',      time: 't h',     dist: '1 job' },
+          { name: 'Clark',      rate: '1/(t-1) job/h',  time: 't-1 h',   dist: '1 job' },
+          { name: 'Together',   rate: '5/6 job/h',      time: '1.2 h',   dist: '1 job' }
+        ],
+        steps: [
+          { title: 'Set up the rate table (1 job total)',
+            desc: 'Let <i>t</i> = apprentice\'s solo time in hours. Clark takes 1 hour less, so his time is <i>t − 1</i>. Rate = 1 ÷ time.',
+            eq: `\\text{Apprentice: } \\frac{1}{t} \\text{ job/h} \\quad \\text{Clark: } \\frac{1}{t-1} \\text{ job/h}` },
+          { title: 'Rates add when working together',
+            desc: 'Together they finish 1 job in 1.2 h, so the combined rate is 1/1.2 = 5/6 job/h.',
+            eq: `\\frac{1}{t} + \\frac{1}{t-1} = \\frac{1}{1.2} = \\frac{5}{6}` },
+          { title: 'Solve for t (clear denominators)',
+            desc: 'Multiply through by 6t(t−1), expand, and solve the quadratic.',
+            eq: `6(t-1) + 6t = 5t(t-1) \\\\ 12t - 6 = 5t^2 - 5t \\\\ 5t^2 - 17t + 6 = 0 \\\\ (5t-2)(t-3)=0` },
+          { title: 'Choose the valid root',
+            desc: 't = 2/5 would make Clark\'s time t − 1 negative (impossible), so discard it.',
+            eq: `t = 3 \\text{ h (Apprentice)} \\quad \\Rightarrow \\quad t - 1 = 2 \\text{ h (Clark)}` }
+        ],
+        finalAnswer: `Clark: ${tClark.toFixed(1)} hours | Apprentice: ${tApp.toFixed(1)} hours`,
+        quiz: { prompt: `Apprentice's rate is 1/t and Clark's is 1/(t-1); together they finish 1 job in 1.2 h. What is t (apprentice's solo time)?`, answer: parseFloat(tApp), unit: 'h' }
+      };
+    },
+    draw: (ctx, canvasTime, p) => {
+      const D = 1;
+      const tApp = p.apprenticeTime, tClark = Math.max(0.5, tApp - 1);
+      const rApp = D / tApp, rClark = D / tClark;
+      const tTog = D / (rApp + rClark);
+      drawWorkTogether(ctx, canvas, {
+        jobUnitLabel: 'job',
+        doneLabel: 'JOB DONE!',
+        rateUnit: 'job/h',
+        people: [
+          { name: 'Clark',      rate: rClark, color: '#eab308', side: 'left' },
+          { name: 'Apprentice', rate: rApp,   color: '#94a3b8', side: 'right' }
+        ],
+        totalTime: tTog,
+        canvasTime,
+        caption: `1 job = the task  •  Clark is 1 h faster  •  together: ${tTog.toFixed(2)} h`
+      });
+    }
+  },
+  {
+    id: 'ex-9',
+    title: 'Example 9.10.5',
+    isExample: true,
+    category: 'worktime',
+    timeUnit: 'min',
+    text: 'A sink can be filled by a pipe in <span class="highlight">5 minutes</span>, but it takes <span class="highlight">7 minutes</span> to drain a full sink. If both the pipe and the drain are open, how long will it take to fill the sink?',
+    defaultParams: { fillTime: 5, drainTime: 7 },
+    sliders: [
+      { key: 'fillTime', label: "Fill Time (pipe)", min: 2, max: 15, step: 0.5, unit: 'min', desc: "Minutes for the pipe alone to fill the sink" },
+      { key: 'drainTime', label: "Drain Time", min: 3, max: 20, step: 0.5, unit: 'min', desc: "Minutes for the drain alone to empty the sink" }
+    ],
+    solver: (p) => {
+      // Job = 1 sink (1 full sink). Rates in sink/min. Variable t = time to fill.
+      // Clamp fill time so the faucet always outpaces the drain (keeps the sink fillable).
+      const tFill = Math.min(p.fillTime, p.drainTime - 0.5), tDrain = p.drainTime;
+      const D = 1;
+      const rFill = D / tFill, rDrain = D / tDrain;      // 1/5 and 1/7 sink/min
+      const netRate = rFill - rDrain;                     // 1/5 - 1/7 = 2/35
+      const tNet = netRate > 0 ? D / netRate : Infinity;  // 35/2 = 17.5 min
+      return {
+        calculatedValues: { tFill, tDrain, tNet, rFill, rDrain, netRate, D, maxTime: tNet },
+        table: [
+          { name: 'Faucet (in)',  rate: '1/5 sink/min',   time: 't min', dist: '(1/5)t sink' },
+          { name: 'Drain (out)',  rate: '−1/7 sink/min',  time: 't min', dist: '−(1/7)t sink' },
+          { name: 'Net',          rate: '2/35 sink/min',  time: 't min', dist: '1 sink' }
+        ],
+        steps: [
+          { title: 'Set up the rate table (1 sink = full)',
+            desc: `The faucet fills 1 sink in ${tFill} min (rate 1/${tFill}); the drain empties 1 sink in ${tDrain} min (rate 1/${tDrain}).`,
+            eq: `\\text{Faucet: } \\frac{1}{${tFill}} \\text{ sink/min} \\quad \\text{Drain: } \\frac{1}{${tDrain}} \\text{ sink/min}` },
+          { title: 'Net rate = fill − drain',
+            desc: 'With both open, the faucet adds water while the drain removes it, so the net fill rate is the difference.',
+            eq: `\\frac{1}{${tFill}} - \\frac{1}{${tDrain}} = \\frac{${tDrain}-${tFill}}{${(tFill*tDrain)|0}} = \\frac{${tDrain-tFill}}{${(tFill*tDrain)|0}} = \\frac{2}{35} \\text{ sink/min}` },
+          { title: 'Solve for t (time to fill 1 sink)',
+            desc: 'Time = 1 sink ÷ net rate.',
+            eq: `t = \\frac{1}{\\frac{2}{35}} = \\frac{35}{2} = ${tNet.toFixed(2)} \\text{ minutes}` }
+        ],
+        finalAnswer: `Time to fill sink: ${tNet.toFixed(2)} minutes`,
+        quiz: { prompt: `The faucet fills at 1/${tFill} sink/min and the drain empties at 1/${tDrain} sink/min. How long to fill 1 sink (solve for t)?`, answer: parseFloat(tNet.toFixed(2)), unit: 'min' }
+      };
+    },
+    draw: (ctx, canvasTime, p) => {
+      const tFill = Math.min(p.fillTime, p.drainTime - 0.5), tDrain = p.drainTime;
+      const D = 1;
+      const rFill = D / tFill, rDrain = D / tDrain;
+      const netRate = rFill - rDrain;
+      const tNet = netRate > 0 ? D / netRate : D * 10;
+      const activeTime = Math.min(canvasTime, tNet * 1.2);
+      const fillLevel = Math.min(1, (netRate * activeTime) / D);
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+      const isDark = state.theme === 'dark';
+      ctx.fillStyle = isDark ? '#0b1329' : '#f0f9ff'; ctx.fillRect(0, 0, w, h);
+      drawTankVisualization(ctx, w, h, fillLevel, rFill, rDrain, 'min');
+      ctx.fillStyle = isDark ? '#f1f5f9' : '#1e293b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(`Net rate: ${fracStr(netRate)} sink/min  •  time to fill: ${tNet.toFixed(2)} min`, w / 2, 22);
+      ctx.fillStyle = '#22d3ee'; ctx.font = '10px var(--font-mono)'; ctx.textAlign = 'left';
+      ctx.fillText(`t = ${activeTime.toFixed(2)} min  |  filled: ${(fillLevel * 100).toFixed(1)}%`, 10, h - 8);
+    }
+  },
+  // === WORK / TIME PRACTICE QUESTIONS ===
+  {
+    id: 'q-23',
+    title: 'Question 23',
+    isExample: false,
+    category: 'worktime',
+    timeUnit: 'h',
+    text: "Bill's father can paint a room in <span class=\"highlight\">2 hours less</span> than it would take Bill to paint it. Working together, they can complete the job in <span class=\"highlight\">2 hours and 24 minutes</span>. How much time would each require working alone?",
+    defaultParams: { billTime: 6 },
+    sliders: [
+      { key: 'billTime', label: "Bill's Solo Time", min: 3, max: 12, step: 0.5, unit: 'h', desc: "Hours for Bill alone (father is always 2 h faster)" }
+    ],
+    solver: (p) => {
+      // Job = 1 room. Rates in room/h. Variable t = Bill's solo time; Father = t − 2.
+      const D = 1;
+      const tBill = p.billTime, tFather = Math.max(0.5, tBill - 2);
+      const rBill = D / tBill, rFather = D / tFather;    // 1/t and 1/(t-2)
+      const rTog = rBill + rFather;                        // = 1/2.4 = 5/12
+      const tTog = D / rTog;                               // 2.4 h
+      const distBill = rBill * tTog, distFather = rFather * tTog;
+      return {
+        calculatedValues: { tBill, tFather, tTog, rBill, rFather, rTog, D, distBill, distFather, maxTime: tTog },
+        table: [
+          { name: 'Bill',     rate: '1/t room/h',      time: 't h',    dist: '1 room' },
+          { name: 'Father',   rate: '1/(t-2) room/h',  time: 't-2 h',  dist: '1 room' },
+          { name: 'Together', rate: '5/12 room/h',     time: '2.4 h',  dist: '1 room' }
+        ],
+        steps: [
+          { title: 'Set up the rate table (1 room = the job)',
+            desc: 'Let <i>t</i> = Bill\'s solo time in hours. Father takes 2 hours less, so his time is <i>t − 2</i>. Rate = 1 ÷ time.',
+            eq: `\\text{Bill: } \\frac{1}{t} \\text{ room/h} \\quad \\text{Father: } \\frac{1}{t-2} \\text{ room/h}` },
+          { title: 'Rates add when working together',
+            desc: 'Together they paint 1 room in 2.4 h, so the combined rate is 1/2.4 = 5/12 room/h.',
+            eq: `\\frac{1}{t} + \\frac{1}{t-2} = \\frac{1}{2.4} = \\frac{5}{12}` },
+          { title: 'Solve for t (clear denominators)',
+            desc: 'Multiply through by 12t(t−2), expand, and solve the quadratic.',
+            eq: `12(t-2) + 12t = 5t(t-2) \\\\ 24t - 24 = 5t^2 - 10t \\\\ 5t^2 - 34t + 24 = 0 \\\\ (5t-4)(t-6)=0` },
+          { title: 'Choose the valid root',
+            desc: 't = 4/5 would make Father\'s time t − 2 negative (impossible), so discard it.',
+            eq: `t = 6 \\text{ h (Bill)} \\quad \\Rightarrow \\quad t - 2 = 4 \\text{ h (Father)}` }
+        ],
+        finalAnswer: `Bill: ${tBill} hours | Father: ${tFather} hours`,
+        quiz: { prompt: `Bill's rate is 1/t and Father's is 1/(t-2); together they paint 1 room in 2.4 h. What is t (Bill's solo time)?`, answer: parseFloat(tBill), unit: 'h' }
+      };
+    },
+    draw: (ctx, canvasTime, p) => {
+      const D = 1;
+      const tBill = p.billTime, tFather = Math.max(0.5, tBill - 2);
+      const rBill = D / tBill, rFather = D / tFather;
+      const tTog = D / (rBill + rFather);
+      drawWorkTogether(ctx, canvas, {
+        jobUnitLabel: 'room',
+        doneLabel: 'ROOM PAINTED!',
+        rateUnit: 'room/h',
+        people: [
+          { name: 'Father', rate: rFather, color: '#f97316', side: 'left' },
+          { name: 'Bill',   rate: rBill,   color: '#60a5fa', side: 'right' }
+        ],
+        totalTime: tTog,
+        canvasTime,
+        caption: `1 room = the job  •  Father is 2 h faster  •  together: ${tTog.toFixed(2)} h`
+      });
+    }
+  },
+  {
+    id: 'q-24',
+    title: 'Question 24',
+    isExample: false,
+    category: 'worktime',
+    timeUnit: 'h',
+    text: 'Jack can wash and wax the family car in <span class="highlight">one hour less</span> than it would take Bob. The two working together can complete the job in <span class="highlight">1.2 hours</span>. How much time would each require if they worked alone?',
+    defaultParams: { bobTime: 3 },
+    sliders: [
+      { key: 'bobTime', label: "Bob's Solo Time", min: 1.5, max: 8, step: 0.5, unit: 'h', desc: "Hours for Bob alone (Jack is always 1 h faster)" }
+    ],
+    solver: (p) => {
+      // Job = 1 car. Rates in car/h. Variable t = Bob's solo time; Jack = t − 1.
+      const D = 1;
+      const tBob = p.bobTime, tJack = Math.max(0.5, tBob - 1);
+      const rBob = D / tBob, rJack = D / tJack;          // 1/t and 1/(t-1)
+      const rTog = rBob + rJack;                           // = 1/1.2 = 5/6
+      const tTog = D / rTog;                               // 1.2 h
+      const distBob = rBob * tTog, distJack = rJack * tTog;
+      return {
+        calculatedValues: { tBob, tJack, tTog, rBob, rJack, rTog, D, distBob, distJack, maxTime: tTog },
+        table: [
+          { name: 'Bob',      rate: '1/t car/h',      time: 't h',    dist: '1 car' },
+          { name: 'Jack',     rate: '1/(t-1) car/h',  time: 't-1 h',  dist: '1 car' },
+          { name: 'Together', rate: '5/6 car/h',      time: '1.2 h',  dist: '1 car' }
+        ],
+        steps: [
+          { title: 'Set up the rate table (1 car = the job)',
+            desc: 'Let <i>t</i> = Bob\'s solo time in hours. Jack takes 1 hour less, so his time is <i>t − 1</i>. Rate = 1 ÷ time.',
+            eq: `\\text{Bob: } \\frac{1}{t} \\text{ car/h} \\quad \\text{Jack: } \\frac{1}{t-1} \\text{ car/h}` },
+          { title: 'Rates add when working together',
+            desc: 'Together they finish 1 car in 1.2 h, so the combined rate is 1/1.2 = 5/6 car/h.',
+            eq: `\\frac{1}{t} + \\frac{1}{t-1} = \\frac{1}{1.2} = \\frac{5}{6}` },
+          { title: 'Solve for t (clear denominators)',
+            desc: 'Multiply through by 6t(t−1), expand, and solve the quadratic.',
+            eq: `6(t-1) + 6t = 5t(t-1) \\\\ 12t - 6 = 5t^2 - 5t \\\\ 5t^2 - 17t + 6 = 0 \\\\ (5t-2)(t-3)=0` },
+          { title: 'Choose the valid root',
+            desc: 't = 2/5 would make Jack\'s time t − 1 negative (impossible), so discard it.',
+            eq: `t = 3 \\text{ h (Bob)} \\quad \\Rightarrow \\quad t - 1 = 2 \\text{ h (Jack)}` }
+        ],
+        finalAnswer: `Jack: ${tJack} hours | Bob: ${tBob} hours`,
+        quiz: { prompt: `Bob's rate is 1/t and Jack's is 1/(t-1); together they finish 1 car in 1.2 h. What is t (Bob's solo time)?`, answer: parseFloat(tBob), unit: 'h' }
+      };
+    },
+    draw: (ctx, canvasTime, p) => {
+      const D = 1;
+      const tBob = p.bobTime, tJack = Math.max(0.5, tBob - 1);
+      const rBob = D / tBob, rJack = D / tJack;
+      const tTog = D / (rBob + rJack);
+      drawWorkTogether(ctx, canvas, {
+        jobUnitLabel: 'car',
+        doneLabel: 'CAR DONE!',
+        rateUnit: 'car/h',
+        people: [
+          { name: 'Jack', rate: rJack, color: '#34d399', side: 'left' },
+          { name: 'Bob',  rate: rBob,  color: '#f9a8d4', side: 'right' }
+        ],
+        totalTime: tTog,
+        canvasTime,
+        caption: `1 car = the job  •  Jack is 1 h faster  •  together: ${tTog.toFixed(2)} h`
+      });
+    }
+  },
+  {
+    id: 'q-25',
+    title: 'Question 25',
+    isExample: false,
+    category: 'worktime',
+    timeUnit: 'h',
+    text: 'Working alone, it takes John <span class="highlight">8 hours longer</span> than Carlos to do a job. Working together, they can do the job in <span class="highlight">3 hours</span>. How long would it take each to do the job working alone?',
+    defaultParams: { carlosTime: 4 },
+    sliders: [
+      { key: 'carlosTime', label: "Carlos's Solo Time", min: 2, max: 12, step: 0.5, unit: 'h', desc: "Hours for Carlos alone (John is always 8 h slower)" }
+    ],
+    solver: (p) => {
+      // Job = 1 job. Rates in job/h. Variable t = Carlos's solo time; John = t + 8.
+      const D = 1;
+      const tCarlos = p.carlosTime, tJohn = tCarlos + 8;
+      const rCarlos = D / tCarlos, rJohn = D / tJohn;    // 1/t and 1/(t+8)
+      const rTog = rCarlos + rJohn;                        // = 1/3
+      const tTog = D / rTog;                               // 3 h
+      const distCarlos = rCarlos * tTog, distJohn = rJohn * tTog;
+      return {
+        calculatedValues: { tCarlos, tJohn, tTog, rCarlos, rJohn, rTog, D, distCarlos, distJohn, maxTime: tTog },
+        table: [
+          { name: 'Carlos',   rate: '1/t job/h',      time: 't h',    dist: '1 job' },
+          { name: 'John',     rate: '1/(t+8) job/h',  time: 't+8 h',  dist: '1 job' },
+          { name: 'Together', rate: '1/3 job/h',      time: '3 h',    dist: '1 job' }
+        ],
+        steps: [
+          { title: 'Set up the rate table (1 job total)',
+            desc: 'Let <i>t</i> = Carlos\'s solo time in hours. John takes 8 hours longer, so his time is <i>t + 8</i>. Rate = 1 ÷ time.',
+            eq: `\\text{Carlos: } \\frac{1}{t} \\text{ job/h} \\quad \\text{John: } \\frac{1}{t+8} \\text{ job/h}` },
+          { title: 'Rates add when working together',
+            desc: 'Together they finish 1 job in 3 h, so the combined rate is 1/3 job/h.',
+            eq: `\\frac{1}{t} + \\frac{1}{t+8} = \\frac{1}{3}` },
+          { title: 'Solve for t (clear denominators)',
+            desc: 'Multiply through by 3t(t+8), expand, and solve the quadratic.',
+            eq: `3(t+8) + 3t = t(t+8) \\\\ 6t + 24 = t^2 + 8t \\\\ t^2 + 2t - 24 = 0 \\\\ (t-4)(t+6)=0` },
+          { title: 'Choose the valid root',
+            desc: 't must be positive (negative time is impossible), so discard t = −6.',
+            eq: `t = 4 \\text{ h (Carlos)} \\quad \\Rightarrow \\quad t + 8 = 12 \\text{ h (John)}` }
+        ],
+        finalAnswer: `Carlos: ${tCarlos} hours | John: ${tJohn} hours`,
+        quiz: { prompt: `Carlos's rate is 1/t and John's is 1/(t+8); together they finish 1 job in 3 h. What is t (Carlos's solo time)?`, answer: parseFloat(tCarlos), unit: 'h' }
+      };
+    },
+    draw: (ctx, canvasTime, p) => {
+      const D = 1;
+      const tCarlos = p.carlosTime, tJohn = tCarlos + 8;
+      const rCarlos = D / tCarlos, rJohn = D / tJohn;
+      const tTog = D / (rCarlos + rJohn);
+      drawWorkTogether(ctx, canvas, {
+        jobUnitLabel: 'job',
+        doneLabel: 'JOB DONE!',
+        rateUnit: 'job/h',
+        people: [
+          { name: 'Carlos', rate: rCarlos, color: '#facc15', side: 'left' },
+          { name: 'John',   rate: rJohn,   color: '#818cf8', side: 'right' }
+        ],
+        totalTime: tTog,
+        canvasTime,
+        caption: `1 job = the task  •  John is 8 h slower  •  together: ${tTog.toFixed(2)} h`
+      });
+    }
+  },
+  {
+    id: 'q-26',
+    title: 'Question 26',
+    isExample: false,
+    category: 'worktime',
+    timeUnit: 'days',
+    text: 'If Yousef can do a piece of work alone in <span class="highlight">6 days</span>, and Bridgit can do it alone in <span class="highlight">4 days</span>, how long will it take the two to complete the job working together?',
+    defaultParams: { yousefTime: 6, bridgitTime: 4 },
+    sliders: [
+      { key: 'yousefTime', label: "Yousef's Solo Time", min: 2, max: 15, step: 0.5, unit: 'days', desc: "Days for Yousef alone" },
+      { key: 'bridgitTime', label: "Bridgit's Solo Time", min: 1, max: 10, step: 0.5, unit: 'days', desc: "Days for Bridgit alone" }
+    ],
+    solver: (p) => {
+      // Job = 1 job. Rates in job/day. Variable t = together time.
+      const D = 1;
+      const tY = p.yousefTime, tB = p.bridgitTime;
+      const rY = D / tY, rB = D / tB;                     // 1/6 and 1/4
+      const rTog = rY + rB;                                 // = 1/t
+      const tTog = D / rTog;                               // 12/5 = 2.4 days
+      const distY = rY * tTog, distB = rB * tTog;
+      return {
+        calculatedValues: { tY, tB, tTog, rY, rB, rTog, D, distY, distB, maxTime: tTog },
+        table: [
+          { name: 'Yousef',   rate: '1/6 job/day',  time: '6 days',  dist: '1 job' },
+          { name: 'Bridgit',  rate: '1/4 job/day',  time: '4 days',  dist: '1 job' },
+          { name: 'Together', rate: '1/t job/day',  time: 't days',  dist: '1 job' }
+        ],
+        steps: [
+          { title: 'Set up the rate table (1 job total)',
+            desc: `Yousef alone: 1 job in ${tY} days → rate 1/${tY}. Bridgit alone: 1 job in ${tB} days → rate 1/${tB}. Together: 1 job in t days → rate 1/t.`,
+            eq: `\\text{Yousef: } \\frac{1}{${tY}} \\text{ job/day} \\quad \\text{Bridgit: } \\frac{1}{${tB}} \\text{ job/day} \\quad \\text{Together: } \\frac{1}{t} \\text{ job/day}` },
+          { title: 'Rates add when working together',
+            desc: 'Their combined rate equals the sum of their individual rates.',
+            eq: `\\frac{1}{${tY}} + \\frac{1}{${tB}} = \\frac{1}{t}` },
+          { title: 'Solve for t',
+            desc: 'Add the fractions on the left, then take the reciprocal of the sum.',
+            eq: `\\frac{1}{${tY}} + \\frac{1}{${tB}} = \\frac{${tB}+${tY}}{${(tY*tB)|0}} = \\frac{${tY+tB}}{${(tY*tB)|0}} \\\\ t = \\frac{${(tY*tB)|0}}{${tY+tB}} = ${tTog.toFixed(2)} \\text{ days}` }
+        ],
+        finalAnswer: `Together: ${tTog.toFixed(2)} days`,
+        quiz: { prompt: `Yousef's rate is 1/${tY} and Bridgit's is 1/${tB} job/day. What is t (the together time)?`, answer: parseFloat(tTog.toFixed(2)), unit: 'days' }
+      };
+    },
+    draw: (ctx, canvasTime, p) => {
+      const D = 1;
+      const tY = p.yousefTime, tB = p.bridgitTime;
+      const rY = D / tY, rB = D / tB;
+      const tTog = D / (rY + rB);
+      drawWorkTogether(ctx, canvas, {
+        jobUnitLabel: 'job',
+        doneLabel: 'JOB DONE!',
+        rateUnit: 'job/day',
+        people: [
+          { name: 'Yousef',  rate: rY, color: '#0ea5e9', side: 'left' },
+          { name: 'Bridgit', rate: rB, color: '#d946ef', side: 'right' }
+        ],
+        totalTime: tTog,
+        canvasTime,
+        caption: `1 job = the task  •  together: ${tTog.toFixed(2)} days`
+      });
+    }
+  },
+  {
+    id: 'q-27',
+    title: 'Question 27',
+    isExample: false,
+    category: 'worktime',
+    timeUnit: 'days',
+    text: 'Working alone, Maryam can do a piece of work in <span class="highlight">3 days</span> that Noor can do in <span class="highlight">4 days</span> and Elana can do in <span class="highlight">5 days</span>. How long will it take them to do it working together?',
+    defaultParams: { maryamTime: 3, noorTime: 4, elanaTime: 5 },
+    sliders: [
+      { key: 'maryamTime', label: "Maryam's Solo Time", min: 1, max: 8, step: 0.5, unit: 'days', desc: "Days for Maryam alone" },
+      { key: 'noorTime', label: "Noor's Solo Time", min: 2, max: 10, step: 0.5, unit: 'days', desc: "Days for Noor alone" },
+      { key: 'elanaTime', label: "Elana's Solo Time", min: 3, max: 12, step: 0.5, unit: 'days', desc: "Days for Elana alone" }
+    ],
+    solver: (p) => {
+      // Job = 1 job. Rates in job/day. Variable t = together time.
+      const D = 1;
+      const tM = p.maryamTime, tN = p.noorTime, tE = p.elanaTime;
+      const rM = D / tM, rN = D / tN, rE = D / tE;      // 1/3, 1/4, 1/5
+      const rTog = rM + rN + rE;                           // = 1/t
+      const tTog = D / rTog;
+      const distM = rM * tTog, distN = rN * tTog, distE = rE * tTog;
+      return {
+        calculatedValues: { tM, tN, tE, tTog, rM, rN, rE, rTog, D, distM, distN, distE, maxTime: tTog },
+        table: [
+          { name: 'Maryam',   rate: '1/3 job/day',  time: '3 days',  dist: '1 job' },
+          { name: 'Noor',     rate: '1/4 job/day',  time: '4 days',  dist: '1 job' },
+          { name: 'Elana',    rate: '1/5 job/day',  time: '5 days',  dist: '1 job' },
+          { name: 'Together', rate: '1/t job/day',  time: 't days',  dist: '1 job' }
+        ],
+        steps: [
+          { title: 'Set up the rate table (1 job total)',
+            desc: `Each person completes 1 job alone: Maryam in ${tM} days (rate 1/${tM}), Noor in ${tN} days (rate 1/${tN}), Elana in ${tE} days (rate 1/${tE}). Together: 1 job in t days (rate 1/t).`,
+            eq: `\\frac{1}{${tM}} + \\frac{1}{${tN}} + \\frac{1}{${tE}} = \\frac{1}{t}` },
+          { title: 'Sum the three rates',
+            desc: 'Find a common denominator and add the fractions on the left.',
+            eq: `\\frac{1}{${tM}} + \\frac{1}{${tN}} + \\frac{1}{${tE}} = \\frac{${(tN*tE)+(tM*tE)+(tM*tN)}}{${(tM*tN*tE)|0}} = \\frac{${(tN*tE)+(tM*tE)+(tM*tN)}}{${(tM*tN*tE)|0}}` },
+          { title: 'Take the reciprocal to get t',
+            desc: 'Since the combined rate equals 1/t, t is the reciprocal of the sum.',
+            eq: `t = \\frac{${(tM*tN*tE)|0}}{${(tN*tE)+(tM*tE)+(tM*tN)}} = ${tTog.toFixed(2)} \\text{ days}` }
+        ],
+        finalAnswer: `Together: ${tTog.toFixed(2)} days`,
+        quiz: { prompt: `Maryam's rate is 1/${tM}, Noor's is 1/${tN}, Elana's is 1/${tE} job/day. What is t (the together time)?`, answer: parseFloat(tTog.toFixed(2)), unit: 'days' }
+      };
+    },
+    draw: (ctx, canvasTime, p) => {
+      const D = 1;
+      const tM = p.maryamTime, tN = p.noorTime, tE = p.elanaTime;
+      const rM = D / tM, rN = D / tN, rE = D / tE;
+      const tTog = D / (rM + rN + rE);
+      drawWorkTogether(ctx, canvas, {
+        jobUnitLabel: 'job',
+        doneLabel: 'JOB DONE!',
+        rateUnit: 'job/day',
+        people: [
+          { name: 'Maryam', rate: rM, color: '#f43f5e', side: 'left' },
+          { name: 'Noor',   rate: rN, color: '#22d3ee', side: 'right' },
+          { name: 'Elana',  rate: rE, color: '#fbbf24', side: 'left' }
+        ],
+        totalTime: tTog,
+        canvasTime,
+        caption: `1 job = the task  •  3 workers together: ${tTog.toFixed(2)} days`
+      });
+    }
+  },
+  {
+    id: 'q-28',
+    title: 'Question 28',
+    isExample: false,
+    category: 'worktime',
+    timeUnit: 'h',
+    text: 'It takes <span class="highlight">10 hours</span> to fill a pool with the inlet pipe. It can be emptied in <span class="highlight">15 hours</span> with the outlet pipe. If the pool is <span class="highlight">half full</span> to begin with, how long will it take to fill from there if both pipes are open?',
+    defaultParams: { fillTime: 10, drainTime: 15, startLevel: 0.5 },
+    sliders: [
+      { key: 'fillTime', label: "Fill Time (inlet)", min: 5, max: 20, step: 0.5, unit: 'h', desc: "Hours for inlet pipe to fill the pool" },
+      { key: 'drainTime', label: "Drain Time (outlet)", min: 8, max: 30, step: 0.5, unit: 'h', desc: "Hours for outlet pipe to empty the pool" },
+      { key: 'startLevel', label: "Initial Fill Level", min: 0.1, max: 0.9, step: 0.1, unit: '', desc: "Fraction of pool already full" }
+    ],
+    solver: (p) => {
+      // Job = 1 pool. Rates in pool/h. Variable t = time to fill the remaining portion.
+      // Clamp fill time so the inlet always outpaces the outlet (keeps the pool fillable).
+      const tFill = Math.min(p.fillTime, p.drainTime - 0.5), tDrain = p.drainTime, start = p.startLevel;
+      const D = 1;
+      const rFill = D / tFill, rDrain = D / tDrain;      // 1/10 and 1/15
+      const netRate = rFill - rDrain;                     // 1/10 - 1/15 = 1/30
+      const remaining = D * (1 - start);                  // 1/2 pool to fill
+      const tNet = netRate > 0 ? remaining / netRate : Infinity; // 15 h
+      return {
+        calculatedValues: { tFill, tDrain, start, rFill, rDrain, netRate, remaining, tNet, D, maxTime: tNet },
+        table: [
+          { name: 'Inlet (in)',   rate: '1/10 pool/h',   time: 't h', dist: '(1/10)t pool' },
+          { name: 'Outlet (out)', rate: '−1/15 pool/h',  time: 't h', dist: '−(1/15)t pool' },
+          { name: 'Net',          rate: '1/30 pool/h',   time: 't h', dist: `${fracStr(remaining)} pool` }
+        ],
+        steps: [
+          { title: 'Set up the rate table (1 pool = full)',
+            desc: `Inlet fills 1 pool in ${tFill} h (rate 1/${tFill}); outlet empties 1 pool in ${tDrain} h (rate 1/${tDrain}).`,
+            eq: `\\text{Inlet: } \\frac{1}{${tFill}} \\text{ pool/h} \\quad \\text{Outlet: } \\frac{1}{${tDrain}} \\text{ pool/h}` },
+          { title: 'Net rate = fill − drain',
+            desc: 'With both open, the net fill rate is the difference of the two rates.',
+            eq: `\\frac{1}{${tFill}} - \\frac{1}{${tDrain}} = \\frac{${tDrain-tFill}}{${(tFill*tDrain)|0}} = \\frac{1}{30} \\text{ pool/h}` },
+          { title: 'Solve for t (fill the remaining portion)',
+            desc: `The pool is already ${(start*100).toFixed(0)}% full, so only ${fracStr(remaining)} of a pool remains to fill.`,
+            eq: `t = \\frac{${fracStr(remaining)}}{\\frac{1}{30}} = ${tNet.toFixed(2)} \\text{ hours}` }
+        ],
+        finalAnswer: `Time to fill from ${(start * 100).toFixed(0)}%: ${tNet.toFixed(2)} hours`,
+        quiz: { prompt: `Net fill rate is 1/30 pool/h and ${fracStr(remaining)} pool remains. What is t (time to fill)?`, answer: parseFloat(tNet.toFixed(2)), unit: 'h' }
+      };
+    },
+    draw: (ctx, canvasTime, p) => {
+      const tFill = Math.min(p.fillTime, p.drainTime - 0.5), tDrain = p.drainTime, start = p.startLevel;
+      const D = 1;
+      const rFill = D / tFill, rDrain = D / tDrain;
+      const netRate = rFill - rDrain;
+      const remaining = D * (1 - start);
+      const tNet = netRate > 0 ? remaining / netRate : D;
+      const activeTime = Math.min(canvasTime, tNet * 1.2);
+      const fillLevel = Math.min(1, start + netRate * activeTime / D);
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+      const isDark = state.theme === 'dark';
+      ctx.fillStyle = isDark ? '#0b1329' : '#f0f9ff'; ctx.fillRect(0, 0, w, h);
+      drawTankVisualization(ctx, w, h, fillLevel, rFill, rDrain, 'h');
+      ctx.fillStyle = isDark ? '#f1f5f9' : '#1e293b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(`net: ${fracStr(netRate)} pool/h  •  start ${(start*100).toFixed(0)}%  •  fill time: ${tNet.toFixed(2)} h`, w / 2, 22);
+      ctx.fillStyle = '#22d3ee'; ctx.font = '10px var(--font-mono)'; ctx.textAlign = 'left';
+      ctx.fillText(`t = ${activeTime.toFixed(2)} h  |  level: ${(fillLevel * 100).toFixed(1)}%`, 10, h - 8);
+    }
+  },
+  {
+    id: 'q-29',
+    title: 'Question 29',
+    isExample: false,
+    category: 'worktime',
+    timeUnit: 'min',
+    text: 'A sink is <span class="highlight">¼ full</span> when both the faucet and the drain are opened. The faucet alone can fill the sink in <span class="highlight">6 minutes</span>, while it takes <span class="highlight">8 minutes</span> to empty it with the drain. How long will it take to fill the remaining ¾ of the sink?',
+    defaultParams: { fillTime: 6, drainTime: 8, startLevel: 0.25 },
+    sliders: [
+      { key: 'fillTime', label: "Faucet Fill Time", min: 3, max: 15, step: 0.5, unit: 'min', desc: "Minutes for the faucet alone to fill the sink" },
+      { key: 'drainTime', label: "Drain Empty Time", min: 4, max: 20, step: 0.5, unit: 'min', desc: "Minutes for the drain alone to empty the sink" },
+      { key: 'startLevel', label: "Starting Fill Level", min: 0.1, max: 0.9, step: 0.05, unit: '', desc: "Fraction of sink already filled" }
+    ],
+    solver: (p) => {
+      // Job = 1 sink (full). Rates in sink/min. Variable t = time to fill the remaining portion.
+      // Clamp fill time so the faucet always outpaces the drain (keeps the sink fillable).
+      const tFill = Math.min(p.fillTime, p.drainTime - 0.5), tDrain = p.drainTime, start = p.startLevel;
+      const D = 1;
+      const rFill = D / tFill, rDrain = D / tDrain;      // 1/6 and 1/8
+      const netRate = rFill - rDrain;                     // 1/6 - 1/8 = 1/24
+      const remaining = D * (1 - start);                  // 3/4 sink to fill
+      const tNet = netRate > 0 ? remaining / netRate : Infinity; // 18 min
+      return {
+        calculatedValues: { tFill, tDrain, start, rFill, rDrain, netRate, remaining, tNet, D, maxTime: tNet },
+        table: [
+          { name: 'Faucet (in)', rate: '1/6 sink/min',   time: 't min', dist: '(1/6)t sink' },
+          { name: 'Drain (out)', rate: '−1/8 sink/min',  time: 't min', dist: '−(1/8)t sink' },
+          { name: 'Net',         rate: '1/24 sink/min',  time: 't min', dist: `${fracStr(remaining)} sink` }
+        ],
+        steps: [
+          { title: 'Set up the rate table (1 sink = full)',
+            desc: `Faucet fills 1 sink in ${tFill} min (rate 1/${tFill}); drain empties 1 sink in ${tDrain} min (rate 1/${tDrain}).`,
+            eq: `\\text{Faucet: } \\frac{1}{${tFill}} \\text{ sink/min} \\quad \\text{Drain: } \\frac{1}{${tDrain}} \\text{ sink/min}` },
+          { title: 'Net rate = fill − drain',
+            desc: 'With both open, the net fill rate is the difference of the two rates.',
+            eq: `\\frac{1}{${tFill}} - \\frac{1}{${tDrain}} = \\frac{${tDrain-tFill}}{${(tFill*tDrain)|0}} = \\frac{1}{24} \\text{ sink/min}` },
+          { title: 'Solve for t (fill the remaining portion)',
+            desc: `The sink is already ${(start*100).toFixed(0)}% full, so only ${fracStr(remaining)} of a sink remains.`,
+            eq: `t = \\frac{${fracStr(remaining)}}{\\frac{1}{24}} = ${tNet.toFixed(2)} \\text{ minutes}` }
+        ],
+        finalAnswer: `Time to fill from ${(start * 100).toFixed(0)}%: ${tNet.toFixed(2)} minutes`,
+        quiz: { prompt: `Net fill rate is 1/24 sink/min and ${fracStr(remaining)} sink remains. What is t (time to fill)?`, answer: parseFloat(tNet.toFixed(2)), unit: 'min' }
+      };
+    },
+    draw: (ctx, canvasTime, p) => {
+      const tFill = Math.min(p.fillTime, p.drainTime - 0.5), tDrain = p.drainTime, start = p.startLevel;
+      const D = 1;
+      const rFill = D / tFill, rDrain = D / tDrain;
+      const netRate = rFill - rDrain;
+      const remaining = D * (1 - start);
+      const tNet = netRate > 0 ? remaining / netRate : D;
+      const activeTime = Math.min(canvasTime, tNet * 1.2);
+      const fillLevel = Math.min(1, start + netRate * activeTime / D);
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+      const isDark = state.theme === 'dark';
+      ctx.fillStyle = isDark ? '#0b1329' : '#f0f9ff'; ctx.fillRect(0, 0, w, h);
+      drawTankVisualization(ctx, w, h, fillLevel, rFill, rDrain, 'min');
+      ctx.fillStyle = isDark ? '#f1f5f9' : '#1e293b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(`net: ${fracStr(netRate)} sink/min  •  start ${(start*100).toFixed(0)}%  •  fill time: ${tNet.toFixed(2)} min`, w / 2, 22);
+      ctx.fillStyle = '#22d3ee'; ctx.font = '10px var(--font-mono)'; ctx.textAlign = 'left';
+      ctx.fillText(`t = ${activeTime.toFixed(2)} min  |  level: ${(fillLevel * 100).toFixed(1)}%`, 10, h - 8);
+    }
+  },
+  {
+    id: 'q-30',
+    title: 'Question 30',
+    isExample: false,
+    category: 'worktime',
+    timeUnit: 'h',
+    text: 'A water tank is being filled by two inlet pipes. Pipe A can fill the tank in <span class="highlight">4.5 hours</span>, while both pipes together can fill the tank in <span class="highlight">2 hours</span>. How long does it take to fill the tank using only Pipe B?',
+    defaultParams: { pipeATime: 4.5, togetherTime: 2 },
+    sliders: [
+      { key: 'pipeATime', label: "Pipe A Solo Time", min: 2, max: 12, step: 0.5, unit: 'h', desc: "Hours for Pipe A alone to fill the tank" },
+      { key: 'togetherTime', label: "Together Time (A+B)", min: 0.5, max: 6, step: 0.25, unit: 'h', desc: "Hours for both pipes together to fill the tank" }
+    ],
+    solver: (p) => {
+      // Job = 1 tank. Rates in tank/h. Variable t = Pipe B's solo time.
+      const D = 1;
+      const tA = p.pipeATime, tTog = p.togetherTime;
+      const rA = D / tA;                                   // 1/4.5 = 2/9
+      const rTog = D / tTog;                               // 1/2
+      const rB = Math.max(0.001, rTog - rA);               // 1/2 - 2/9 = 5/18
+      const tB = D / rB;                                   // 18/5 = 3.6 h
+      const distA = rA * tTog, distB = rB * tTog;
+      return {
+        calculatedValues: { tA, tTog, tB, rA, rB, rTog, D, distA, distB, maxTime: tTog },
+        table: [
+          { name: 'Pipe A',       rate: '2/9 tank/h',  time: '4.5 h', dist: '1 tank' },
+          { name: 'Pipe B',       rate: '1/t tank/h',  time: 't h',   dist: '1 tank' },
+          { name: 'Together',     rate: '1/2 tank/h',  time: '2 h',   dist: '1 tank' }
+        ],
+        steps: [
+          { title: 'Set up the rate table (1 tank = full)',
+            desc: `Pipe A fills 1 tank in ${tA} h, so its rate is 1/${tA} = 2/9 tank/h. Together they fill 1 tank in ${tTog} h (rate 1/${tTog} = 1/2 tank/h). Let Pipe B take t hours alone (rate 1/t).`,
+            eq: `\\text{A: } \\frac{1}{${tA}} = \\frac{2}{9} \\text{ tank/h} \\quad \\text{B: } \\frac{1}{t} \\text{ tank/h} \\quad \\text{Together: } \\frac{1}{${tTog}} = \\frac{1}{2} \\text{ tank/h}` },
+          { title: 'Rates add when both pipes work',
+            desc: 'The combined rate equals the sum of the two individual rates.',
+            eq: `\\frac{2}{9} + \\frac{1}{t} = \\frac{1}{2}` },
+          { title: 'Solve for t (Pipe B\'s solo time)',
+            desc: 'Isolate 1/t, then take the reciprocal.',
+            eq: `\\frac{1}{t} = \\frac{1}{2} - \\frac{2}{9} = \\frac{9-4}{18} = \\frac{5}{18} \\quad \\Rightarrow \\quad t = \\frac{18}{5} = ${tB.toFixed(2)} \\text{ hours}` }
+        ],
+        finalAnswer: `Pipe B solo time: ${tB.toFixed(2)} hours`,
+        quiz: { prompt: `Pipe A rate is 2/9 tank/h and together is 1/2 tank/h. What is t (Pipe B's solo time)?`, answer: parseFloat(tB.toFixed(2)), unit: 'h' }
+      };
+    },
+    draw: (ctx, canvasTime, p) => {
+      const D = 1;
+      const tA = p.pipeATime, tTog = p.togetherTime;
+      const rA = D / tA, rTog = D / tTog, rB = Math.max(0.001, rTog - rA);
+      const tB = D / rB;
+      drawWorkTogether(ctx, canvas, {
+        jobUnitLabel: 'tank',
+        doneLabel: 'TANK FILLED!',
+        rateUnit: 'tank/h',
+        people: [
+          { name: 'Pipe A', rate: rA, color: '#22c55e', side: 'left' },
+          { name: 'Pipe B', rate: rB, color: '#06b6d4', side: 'right' }
+        ],
+        totalTime: tTog,
+        canvasTime,
+        caption: `1 tank = the job  •  A: ${tA} h, B: ${tB.toFixed(2)} h, together: ${tTog} h`
+      });
+    }
+  },
   ];
 
   // Helper to parse question strings and dynamically extract details
@@ -1432,6 +2256,120 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- DRAWING UTILITIES ---
 
+  // Format a small decimal as a tidy fraction string (e.g. 0.3333 -> "1/3", 0.4167 -> "5/12").
+  // Falls back to a rounded decimal if no clean fraction is found within tolerance.
+  function fracStr(x) {
+    if (Math.abs(x - Math.round(x)) < 1e-4) return String(Math.round(x));
+    const sign = x < 0 ? '-' : '';
+    const v = Math.abs(x);
+    for (let d = 1; d <= 24; d++) {
+      const n = v * d;
+      if (Math.abs(n - Math.round(n)) < 1e-3) {
+        return `${sign}${Math.round(n)}/${d}`;
+      }
+    }
+    return v.toFixed(2);
+  }
+
+  // ── Shared Work/Time visualization helper ──────────────────────────────
+  // Draws two (or three) people walking TOWARD each other from opposite ends
+  // of a single track. They "meet" when the job is fully done. This makes the
+  // "working together is faster" idea visible: the gap closes from both ends.
+  //
+  // opts: {
+  //   jobUnitLabel: 'room' | 'job' | 'shed' | 'car' | 'tank' ...   (singular unit of "1 job")
+  //   doneLabel:    'ROOM CLEAN!' | 'JOB DONE!' ...                  (banner shown at meeting point)
+  //   rateUnit:     'room/h' | 'job/day' | 'sink/min' ...           (displayed under each arrow)
+  //   people: [ {name, rate, color, side:'left'|'right'}, ... ]     (1..3 people)
+  //   totalTime:    number — simulated time at which the job is complete
+  //   canvasTime:   number — current animation time
+  //   caption:      string — header text
+  // }
+  function drawWorkTogether(ctx, canvas, opts) {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const n = opts.people.length;
+    const totalTime = opts.totalTime;
+    const activeTime = Math.min(opts.canvasTime, totalTime * 1.2);
+
+    // Lay out lanes evenly
+    const lanes = [];
+    if (n === 1) lanes.push(Math.round(h * 0.5));
+    else if (n === 2) { lanes.push(Math.round(h * 0.37)); lanes.push(Math.round(h * 0.63)); }
+    else { lanes.push(Math.round(h * 0.27)); lanes.push(Math.round(h * 0.5)); lanes.push(Math.round(h * 0.73)); }
+    if (n <= 2) drawWorkTrackBackground(ctx, w, h, lanes[0], lanes[1] || lanes[0]);
+    else drawWorkTrackBackground3(ctx, w, h, lanes[0], lanes[1], lanes[2]);
+
+    const margin = 80, startX = margin, endX = w - margin;
+    const trackW = endX - startX;
+
+    // Total combined rate = sum of individual rates (1 job / totalTime by construction)
+    const sumRate = opts.people.reduce((s, p) => s + p.rate, 0) || 1;
+
+    // Meeting point is where the job is done — visually place it at the centre
+    // for the 2-person "closing the gap" metaphor; each person covers a share
+    // proportional to their rate.
+    const meetX = startX + trackW / 2;
+    const meetTime = totalTime;
+
+    // Meeting flag at centre
+    const topY = Math.min(...lanes) - 28;
+    const botY = Math.max(...lanes) + 28;
+    if (activeTime >= meetTime * 0.98) {
+      ctx.fillStyle = '#22c55e';
+      const bw = Math.max(90, ctx.measureText(opts.doneLabel).width + 28);
+      ctx.beginPath(); ctx.roundRect(meetX - bw / 2, (topY + botY) / 2 - 11, bw, 22, 6); ctx.fill();
+      ctx.fillStyle = '#000000'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(opts.doneLabel, meetX, (topY + botY) / 2 + 4);
+    } else {
+      ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(meetX, topY); ctx.lineTo(meetX, botY); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#22c55e'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('MEET HERE', meetX, topY - 6);
+    }
+
+    // Start markers
+    ctx.fillStyle = state.theme === 'dark' ? '#94a3b8' : '#475569';
+    ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+    const leftPeople = opts.people.filter(p => p.side !== 'right');
+    const rightPeople = opts.people.filter(p => p.side === 'right');
+    if (leftPeople.length) ctx.fillText(`${opts.jobUnitLabel.toUpperCase()} START`, startX, lanes[leftPeople[0] ? opts.people.indexOf(leftPeople[0]) : 0] - 38);
+    if (rightPeople.length) ctx.fillText(`${opts.jobUnitLabel.toUpperCase()} START`, endX, lanes[opts.people.indexOf(rightPeople[0])] - 38);
+
+    // Draw each person walking toward the centre
+    opts.people.forEach((person, i) => {
+      const laneY = lanes[i];
+      const share = person.rate / sumRate;            // fraction of track this person covers
+      const traveledFrac = (person.rate * Math.min(activeTime, meetTime)) / 1; // in "job units" so far
+      const traveledTrackFrac = Math.min(traveledFrac, share); // clamp to own share
+      // map [0, share] -> [startX/endX, meetX]
+      let pos;
+      if (person.side === 'right') {
+        pos = endX - (traveledTrackFrac / share) * (trackW / 2);
+      } else {
+        pos = startX + (traveledTrackFrac / share) * (trackW / 2);
+      }
+      const facingLeft = person.side === 'right';
+      drawPerson(ctx, pos, laneY, person.name, person.color, activeTime * person.rate * 30, facingLeft);
+      const arrowDir = facingLeft ? -28 : 28;
+      drawSpeedArrow(ctx, pos, laneY - 56, arrowDir, person.color, `${fracStr(person.rate)} ${opts.rateUnit}`);
+
+      // Share ruler
+      const rulerStart = person.side === 'right' ? pos : startX;
+      const rulerEnd = person.side === 'right' ? endX : pos;
+      drawRuler(ctx, rulerStart, rulerEnd, laneY + 30, `${fracStr(person.rate * Math.min(activeTime, meetTime))} ${opts.jobUnitLabel}`, person.color);
+    });
+
+    // Combined job progress bar
+    const jobPct = Math.min(sumRate * activeTime / 1 * 100, 100);
+    drawJobProgressBar(ctx, w, h, jobPct, '#4ade80');
+
+    // Header caption
+    ctx.fillStyle = state.theme === 'dark' ? '#f1f5f9' : '#1e293b';
+    ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(opts.caption, w / 2, 22);
+  }
+
   // Standard Ground and Background
   function drawBackground(ctx, w, h, centerY) {
     ctx.clearRect(0, 0, w, h);
@@ -1568,6 +2506,97 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.quadraticCurveTo(x + 20, y - 4, x + 40, y);
       }
       ctx.stroke();
+    }
+  }
+
+  // Draw work/time 2-lane track background
+  function drawWorkTrackBackground(ctx, w, h, lane1Y, lane2Y) {
+    ctx.clearRect(0, 0, w, h);
+    const isDark = (state.theme === 'dark');
+    ctx.fillStyle = isDark ? '#0b1329' : '#f0f9ff';
+    ctx.fillRect(0, 0, w, h);
+    [lane1Y, lane2Y].forEach(y => {
+      ctx.fillStyle = isDark ? '#1f2937' : '#e2e8f0';
+      ctx.fillRect(0, y - 22, w, 44);
+      ctx.strokeStyle = isDark ? '#4b5563' : '#94a3b8';
+      ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = isDark ? '#065f46' : '#86efac';
+      ctx.fillRect(0, y - 25, w, 3);
+      ctx.fillRect(0, y + 22, w, 3);
+    });
+  }
+
+  // Draw work/time 3-lane track background
+  function drawWorkTrackBackground3(ctx, w, h, lane1Y, lane2Y, lane3Y) {
+    ctx.clearRect(0, 0, w, h);
+    const isDark = (state.theme === 'dark');
+    ctx.fillStyle = isDark ? '#0b1329' : '#f0f9ff';
+    ctx.fillRect(0, 0, w, h);
+    [lane1Y, lane2Y, lane3Y].forEach(y => {
+      ctx.fillStyle = isDark ? '#1f2937' : '#e2e8f0';
+      ctx.fillRect(0, y - 16, w, 32);
+      ctx.strokeStyle = isDark ? '#4b5563' : '#94a3b8';
+      ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = isDark ? '#065f46' : '#86efac';
+      ctx.fillRect(0, y - 18, w, 2);
+      ctx.fillRect(0, y + 16, w, 2);
+    });
+  }
+
+  // Draw job completion progress bar at bottom of canvas
+  function drawJobProgressBar(ctx, w, h, pct, color) {
+    const barH = 12, barY = h - 26, barX = 80, barW = w - 160;
+    const isDark = (state.theme === 'dark');
+    ctx.fillStyle = isDark ? '#1f2937' : '#e2e8f0';
+    ctx.beginPath(); ctx.roundRect(barX, barY, barW, barH, 6); ctx.fill();
+    const fillW = Math.max(0, Math.min(pct / 100, 1) * barW);
+    if (fillW > 0) {
+      const grad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+      grad.addColorStop(0, color); grad.addColorStop(1, '#22d3ee');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.roundRect(barX, barY, fillW, barH, 6); ctx.fill();
+    }
+    ctx.fillStyle = isDark ? '#f1f5f9' : '#0f172a';
+    ctx.font = 'bold 10px var(--font-mono)'; ctx.textAlign = 'center';
+    ctx.fillText(`Job Progress: ${Math.min(pct, 100).toFixed(1)}%`, w / 2, barY - 5);
+  }
+
+  // Draw animated water tank for fill/drain problems
+  function drawTankVisualization(ctx, w, h, fillLevel, inRate, outRate, timeUnit) {
+    const isDark = (state.theme === 'dark');
+    const tankW = 150, tankH = 160;
+    const tankX = w / 2 - tankW / 2, tankY = h / 2 - tankH / 2 - 10;
+    ctx.fillStyle = isDark ? '#1e293b' : '#f8fafc';
+    ctx.strokeStyle = isDark ? '#475569' : '#94a3b8'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.roundRect(tankX, tankY, tankW, tankH, 8); ctx.fill(); ctx.stroke();
+    const waterH = Math.max(0, Math.min(fillLevel, 1)) * (tankH - 10);
+    if (waterH > 0) {
+      const waterY = tankY + tankH - 5 - waterH;
+      const waterGrad = ctx.createLinearGradient(tankX, waterY, tankX, waterY + waterH);
+      waterGrad.addColorStop(0, 'rgba(56,189,248,0.65)'); waterGrad.addColorStop(1, 'rgba(2,132,199,0.9)');
+      ctx.fillStyle = waterGrad;
+      ctx.beginPath(); ctx.roundRect(tankX + 3, waterY, tankW - 6, waterH, [0, 0, 5, 5]); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+      ctx.beginPath(); ctx.moveTo(tankX + 5, waterY + 5); ctx.lineTo(tankX + tankW - 5, waterY + 5); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.fillStyle = isDark ? '#f1f5f9' : '#1e293b'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`${(Math.min(fillLevel, 1) * 100).toFixed(1)}% Full`, tankX + tankW / 2, tankY - 12);
+    if (inRate > 0) {
+      ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(tankX + 28, tankY - 28); ctx.lineTo(tankX + 28, tankY + 2); ctx.stroke();
+      ctx.fillStyle = '#22c55e'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(`+${inRate.toFixed(1)}/${timeUnit}`, tankX + 28, tankY - 33);
+    }
+    if (outRate > 0) {
+      ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(tankX + tankW - 28, tankY + tankH - 2); ctx.lineTo(tankX + tankW - 28, tankY + tankH + 25); ctx.stroke();
+      ctx.fillStyle = '#f43f5e'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(`-${outRate.toFixed(1)}/${timeUnit}`, tankX + tankW - 28, tankY + tankH + 38);
     }
   }
 
@@ -1996,6 +3025,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (p.category === 'roundtrip') tagLabel = 'Round Trip';
       if (p.category === 'catchup') tagLabel = 'Catch Up';
       if (p.category === 'split') tagLabel = 'Split';
+      if (p.category === 'worktime') tagLabel = 'Work/Time';
       
       item.innerHTML = `
         <div class="problem-item-header">
@@ -2061,7 +3091,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const prob = getSelectedProblem();
     const solved = prob.solver(state.customParams);
     
-    // Max animation hours depends on the problem context
+    // Max animation time depends on the problem context
     let maxHours = 5.0;
     if (prob.category === 'opposite') {
       maxHours = solved.calculatedValues.t * 1.15;
@@ -2071,14 +3101,17 @@ document.addEventListener('DOMContentLoaded', () => {
       maxHours = solved.calculatedValues.t1 * 1.15;
     } else if (prob.category === 'split') {
       maxHours = solved.calculatedValues.T;
+    } else if (prob.category === 'worktime') {
+      maxHours = solved.calculatedValues.maxTime * 1.2;
     }
     
+    const timeUnit = prob.id === 'q-22' ? 's' : (prob.timeUnit || 'h');
     timelineSlider.min = "0";
     timelineSlider.max = maxHours.toFixed(2);
     timelineSlider.step = (maxHours / 100).toFixed(4);
     timelineSlider.value = "0";
     
-    timelineValDisplay.textContent = `0.00 ${prob.id === 'q-22' ? 's' : 'h'}`;
+    timelineValDisplay.textContent = `0.00 ${timeUnit}`;
   }
 
   // Create Parameter Sliders in the Playground Card
@@ -2200,11 +3233,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const elapsedSecs = (timestamp - lastTimestamp) / 1000;
     lastTimestamp = timestamp;
     
-    // Scale animation speed (hours or seconds simulated per wall second)
+    // Scale animation speed per wall-clock second
     const prob = getSelectedProblem();
     const isSecs = (prob.id === 'q-22');
-    // For hours, we make it speed through. E.g., 0.5 hours per wall-clock second
-    const speedFactor = isSecs ? 5 : 0.4; // hours per wall-clock second
+    const isMin = (prob.timeUnit === 'min');
+    const isDays = (prob.timeUnit === 'days');
+    // Speed factor: simulated time-units per real second
+    const speedFactor = isSecs ? 5 : isMin ? 3 : isDays ? 0.08 : 0.4;
     
     state.animationTime += elapsedSecs * speedFactor * state.speedMultiplier;
     
@@ -2217,8 +3252,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Update timeline values
+    const unit = isSecs ? 's' : (prob.timeUnit || 'h');
     timelineSlider.value = state.animationTime.toFixed(4);
-    const unit = isSecs ? 's' : 'h';
     timelineValDisplay.textContent = `${state.animationTime.toFixed(2)} ${unit}`;
     
     requestRedraw();
@@ -2252,7 +3287,8 @@ document.addEventListener('DOMContentLoaded', () => {
     state.animationTime = 0;
     timelineSlider.value = "0";
     const prob = getSelectedProblem();
-    timelineValDisplay.textContent = `0.00 ${prob.id === 'q-22' ? 's' : 'h'}`;
+    const resetUnit = prob.id === 'q-22' ? 's' : (prob.timeUnit || 'h');
+    timelineValDisplay.textContent = `0.00 ${resetUnit}`;
     
     requestRedraw();
   });
@@ -2261,7 +3297,8 @@ document.addEventListener('DOMContentLoaded', () => {
   timelineSlider.addEventListener('input', (e) => {
     state.animationTime = parseFloat(e.target.value);
     const prob = getSelectedProblem();
-    timelineValDisplay.textContent = `${state.animationTime.toFixed(2)} ${prob.id === 'q-22' ? 's' : 'h'}`;
+    const scrubUnit = prob.id === 'q-22' ? 's' : (prob.timeUnit || 'h');
+    timelineValDisplay.textContent = `${state.animationTime.toFixed(2)} ${scrubUnit}`;
     
     requestRedraw();
   });
